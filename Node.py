@@ -50,9 +50,20 @@ class Node:
 				self.Immediate_Neighbours[sender_ip] = [0,0,0]
 			return
 		
-		elif (msg['type'] == 'gps_request' or msg['type'] == 'gps_reply') and msg['dst_ip'] != self.IP:
+		elif msg['type'] == 'gps_reply' and msg['dst_ip'] != self.IP:
 			# Forward the msg
 			self.send_msg(msg)
+		
+		elif msg['type'] == 'gps_request' and msg['dst_ip'] != self.IP:
+			if(msg['dst_ip'] in self.GPS_Map):
+				rlp_msg = {'type' : 'gps_reply','id':self.msg_id,
+						'src_ip' : self.IP, 'dst_ip' : msg['src_ip'],
+						'src_gps' : self.GPS_Map[msg['dst_ip']]}
+				self.msg_id += 1
+				self.send_msg(rlp_msg)
+				return
+			# Forward the msg
+			self.send_msg_test(msg)
 
 		elif msg['type'] == 'gps_request':
 			rlp_msg = {'type' : 'gps_reply','id':self.msg_id,
