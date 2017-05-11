@@ -11,10 +11,11 @@ class Node:
 	# IP = None 			# my ip
 	# GPS_Location = None 	# my gps
 	# GPS_Map = {} 			# map[node_ip] => its gps
-	# Immediate_Neighbours = {} # map[node_ip] => (t1, t2, t3)
+	# Immediate_Neighbours = {}	# map[node_ip] => (t1, t2, t3)
 	# sended_msgs = {} 		# map[node_ip] => list of msg id(id1,id2...) to prevent resend the same msg again
-	# wait_ACK = {}			#map[msg_id] ==> send time
-	
+	# wait_ACK = {}			# map[msg_id] ==> send time
+	# self.alfa = {}		# map[node_ip] ==> (alfa1..3)
+	# self.beta = {}		# map[node_ip] ==> (beta1..3)
 	def __init__(self, env, ip, gps):
 		self.Environment = env
 		self.IP = ip
@@ -23,12 +24,15 @@ class Node:
 		self.Immediate_Neighbours = {}
 		self.sended_msgs = {}
 		self.GPS_Map = {}
+		
 		self.wait_ACK = {}
+		self.alfa = {}
+		self.beta = {}
 
 		self.hello()
 
 	def add_neighbour(self, node):
-		self.Immediate_Neighbours[node] = []
+		self.Immediate_Neighbours[node] = [0,0,0]
 
 	def hello(self):
 		# print(self.IP,'send hello')
@@ -67,7 +71,6 @@ class Node:
 						'src_gps' : self.GPS_Location, 
 						'rpl_ip': msg['dst_ip'],
 						'rpl_gps':self.GPS_Map[msg['dst_ip']]}
-				print("@@@@@@@@@@@@@@@@@@@@@@@@@"*3)
 				self.msg_id += 1
 				self.send_msg(rlp_msg)
 				return
@@ -151,9 +154,13 @@ class Node:
 			print("******************",possible_nodes)
 		
 		# 2- choose one neighbor to send msg to
+		mn = 10000
+		ip = 0
 		for node_ip in possible_nodes:
-			self.Environment.send(self.IP, node_ip, msg)
-		
+			if(mn > self.predict_time(node_ip)):
+				mn = self.predict_time(node_ip)
+				ip = node_ip
+		self.Environment.send(self.IP, node_ip, msg)
 		return 0
 
 	def in_region(self, dest_gps, gps, ang = 45):
@@ -183,3 +190,6 @@ class Node:
 		# xnew = xnew + cx
 		# ynew = ynew + cy
 		return [xnew,ynew]
+
+	def predict_time(self, node_ip):
+		return sum(self.Immediate_Neighbours[node_ip])/3
