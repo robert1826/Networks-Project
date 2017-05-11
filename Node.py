@@ -54,23 +54,34 @@ class Node:
 			# Forward the msg
 			self.send_msg(msg)
 		
+		# If have wanted gps reply else forward
 		elif msg['type'] == 'gps_request' and msg['dst_ip'] != self.IP:
 			if(msg['dst_ip'] in self.GPS_Map):
 				rlp_msg = {'type' : 'gps_reply','id':self.msg_id,
 						'src_ip' : self.IP, 'dst_ip' : msg['src_ip'],
-						'src_gps' : self.GPS_Map[msg['dst_ip']]}
+						'src_gps' : self.GPS_Location, 
+						'rpl_ip': msg['dst_ip'],
+						'rpl_gps':self.GPS_Map[msg['dst_ip']]}
 				self.msg_id += 1
 				self.send_msg(rlp_msg)
 				return
 			# Forward the msg
 			self.send_msg_test(msg)
 
+		# Reply with my location
 		elif msg['type'] == 'gps_request':
 			rlp_msg = {'type' : 'gps_reply','id':self.msg_id,
 						'src_ip' : self.IP, 'dst_ip' : msg['src_ip'],
-						'src_gps' : self.GPS_Location}
+						'src_gps' : self.GPS_Location, 
+						'rpl_ip': self.IP,
+						'rpl_gps':self.GPS_Location}
 			self.msg_id += 1
 			self.send_msg(rlp_msg)
+		
+		# Update GPS Map with received location
+		elif msg['type'] == 'gps_reply':
+			self.GPS_Map[msg['rpl_ip']] = msg['rpl_gps']
+		
 		elif msg['type'] == 'ACK':
 			# Update time for msg[src_ip]
 			return
