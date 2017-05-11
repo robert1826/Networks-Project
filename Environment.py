@@ -14,26 +14,27 @@ if __name__ == '__main__':
 	# 1-2
 	# |
 	# 3-4
-	for i in range(1,5):
+	#	|
+	# 	5
+	for i in range(1,6):
 		env.Nodes[i] = Node(env, i, [i,i])
 
 	env.Nodes[1].GPS_Location = [0,0]
 	env.Nodes[2].GPS_Location = [10,2]
 	env.Nodes[3].GPS_Location = [0,-10]
-	env.Nodes[4].GPS_Location = [-10,-10]
+	env.Nodes[4].GPS_Location = [10,-10]
+	env.Nodes[5].GPS_Location = [10,-20]
 
 	env.Nodes[1].add_neighbour(2)
 	env.Nodes[1].add_neighbour(3)
 	env.Nodes[3].add_neighbour(4)
+	env.Nodes[4].add_neighbour(5)
 
 	time.sleep(3)
 
 	for i in env.Nodes:
 		print(env.Nodes[i].GPS_Map)
-	print()
-	env.Nodes[1].request_gps(4)
+	print("********************")
+	env.Nodes[1].request_gps(5)
 	for i in env.Nodes:
 		print(env.Nodes[i].GPS_Map)
-
-	for i in env.Nodes:
-		print(env.Nodes[i].GPS_Location)

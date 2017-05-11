@@ -8,12 +8,13 @@ from Environment import *
 import time, threading, math
 class Node:
 	# Environment = None
-	# IP = None # my ip
-	# GPS_Location = None # my gps
-	# GPS_Map = {} # map[node_ip] => its gps
+	# IP = None 			# my ip
+	# GPS_Location = None 	# my gps
+	# GPS_Map = {} 			# map[node_ip] => its gps
 	# Immediate_Neighbours = {} # map[node_ip] => (t1, t2, t3)
-	# sended_msgs = {} # map[node_ip] => list of msg id(id1,id2...) to prevent resend the same msg again
-
+	# sended_msgs = {} 		# map[node_ip] => list of msg id(id1,id2...) to prevent resend the same msg again
+	# wait_ACK = {}			#map[msg_id] ==> send time
+	
 	def __init__(self, env, ip, gps):
 		self.Environment = env
 		self.IP = ip
@@ -22,19 +23,23 @@ class Node:
 		self.Immediate_Neighbours = {}
 		self.sended_msgs = {}
 		self.GPS_Map = {}
+		self.wait_ACK = {}
 
 		self.hello()
 
 	def add_neighbour(self, node):
-		self.Immediate_Neighbours[node] = [0,0,0]
+		self.Immediate_Neighbours[node] = []
 
 	def hello(self):
 		# print(self.IP,'send hello')
-		for node_ip in self.Immediate_Neighbours:
+		for node_ip in list(self.Immediate_Neighbours):
 			# send(ip, msg)
 			msg = {'type' : 'hello', 'id' : self.msg_id ,
 					'src_ip' : self.IP, 'dst_ip' : node_ip,
 					'src_gps' : self.GPS_Location}
+			
+			# if(self.msg_id not in )
+			self.wait_ACK[self.msg_id] = time.time()
 			self.msg_id += 1
 			self.Environment.send(self.IP, node_ip, msg)
 		threading.Timer(1, self.hello).start()
@@ -62,11 +67,12 @@ class Node:
 						'src_gps' : self.GPS_Location, 
 						'rpl_ip': msg['dst_ip'],
 						'rpl_gps':self.GPS_Map[msg['dst_ip']]}
+				print("@@@@@@@@@@@@@@@@@@@@@@@@@"*3)
 				self.msg_id += 1
 				self.send_msg(rlp_msg)
 				return
 			# Forward the msg
-			self.send_msg_test(msg)
+			self.send_msg(msg)
 
 		# Reply with my location
 		elif msg['type'] == 'gps_request':
@@ -84,42 +90,21 @@ class Node:
 		
 		elif msg['type'] == 'ACK':
 			# Update time for msg[src_ip]
+			if(msg['id'] in self.wait_ACK):
+				dt = self.wait_ACK[msg['id']] - time.time()
+				del self.wait_ACK[msg['id']]
+				self.Immediate_Neighbours[msg['src_ip']].append(dt)
+				
+				if(len(self.Immediate_Neighbours[msg['src_ip']])>3):
+					del self.Immediate_Neighbours[msg['src_ip']][0]
+				# print(dt)
+				# print(msg['src_ip'],"=====>",self.Immediate_Neighbours[msg['src_ip']])
 			return
 
 	def send_ACK(self, node_ip, received_msg):
 		msg = {'type' : 'ACK', 'id': received_msg['id'] ,
 				'src_ip' : self.IP, 'dst_ip' : node_ip, 'src_gps' : self.GPS_Location}
 		self.Environment.send(self.IP, node_ip, msg)
-
-	def send_msg(self, msg):
-		if(msg['dst_ip'] not in self.GPS_Map):
-			self.send_msg_test(msg)
-			return
-		# This message was send before or not
-		f = False
-		if msg['src_ip'] in self.sended_msgs:
-			for i in self.sended_msgs[msg['src_ip']]:
-				if(i == msg['id']):
-					return
-		else:
-			self.sended_msgs[msg['src_ip']] = []
-		self.sended_msgs[msg['src_ip']].append(msg['id'])
-
-		# 1- determine possible neighbor
-		possible_nodes = []
-		ang = 0
-		while(len(possible_nodes) == 0):
-			ang += 45
-			for node_ip in self.Immediate_Neighbours:
-				if(self.in_region(self.GPS_Map[msg['dst_ip']], self.GPS_Map[node_ip], ang)):
-					possible_nodes.append(node_ip)
-			print("******************",possible_nodes)
-		
-		# 2- choose one neighbor to send msg to
-		for node_ip in possible_nodes:
-			self.Environment.send(self.IP, node_ip, msg)
-		
-		return 0
 
 	def send_msg_test(self, msg):
 		f = False
@@ -141,16 +126,44 @@ class Node:
 		self.msg_id += 1
 		self.send_msg_test(msg)
 
-	def in_region(self, dest_gps, gps, ang = 45):
+	def send_msg(self, msg):
+		if(msg['dst_ip'] not in self.GPS_Map):
+			self.send_msg_test(msg)
+			return
+		
+		# This message was send before or not
+		f = False
+		if msg['src_ip'] in self.sended_msgs:
+			for i in self.sended_msgs[msg['src_ip']]:
+				if(i == msg['id']):
+					return
+		else:
+			self.sended_msgs[msg['src_ip']] = []
+		self.sended_msgs[msg['src_ip']].append(msg['id'])
+		# 1- determine possible neighbor
+		possible_nodes = []
+		ang = 0
+		while(len(possible_nodes) == 0):
+			ang += 45
+			for node_ip in self.Immediate_Neighbours:
+				if(self.in_region(self.GPS_Map[msg['dst_ip']], self.GPS_Map[node_ip], ang)):
+					possible_nodes.append(node_ip)
+			print("******************",possible_nodes)
+		
+		# 2- choose one neighbor to send msg to
+		for node_ip in possible_nodes:
+			self.Environment.send(self.IP, node_ip, msg)
+		
+		return 0
 
-		m = (dest_gps[1] - self.GPS_Location[1]) / (dest_gps[0] - self.GPS_Location[0]-0.0000000000000001)
-		angle = math.atan(m)
+	def in_region(self, dest_gps, gps, ang = 45):
+		m1 = dest_gps[1] - self.GPS_Location[1]
+		m2 = dest_gps[0] - self.GPS_Location[0]-0.0000000000000001
+		angle = math.atan2(m1,m2)
 
 		p = self.rotate_point(gps[:], angle)
 		# print(p)
-
-		m = p[1] / (p[0]+0.0000000001)
-		angle = math.degrees(math.atan(m))
+		angle = math.degrees(math.atan2(p[1], p[0]+0.00000000001))
 		if(angle<= ang and angle >= -1*ang):
 			return True
 		return False
