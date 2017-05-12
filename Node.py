@@ -90,6 +90,7 @@ class Node:
 		# Update GPS Map with received location
 		elif msg['type'] == 'gps_reply':
 			self.GPS_Map[msg['rpl_ip']] = msg['rpl_gps']
+			print("**"*10,self.IP,"receive location of",msg['rpl_ip'])
 		
 		elif msg['type'] == 'ACK':
 			# Update time for msg[src_ip]
@@ -109,7 +110,7 @@ class Node:
 				'src_ip' : self.IP, 'dst_ip' : node_ip, 'src_gps' : self.GPS_Location}
 		self.Environment.send(self.IP, node_ip, msg)
 
-	def send_msg_test(self, msg):
+	def send_msg_broadcast(self, msg):
 		f = False
 		if msg['src_ip'] in self.sended_msgs:
 			for i in self.sended_msgs[msg['src_ip']]:
@@ -127,11 +128,11 @@ class Node:
 				'src_ip' : self.IP, 'dst_ip' : dst_ip,
 				'src_gps' : self.GPS_Location}
 		self.msg_id += 1
-		self.send_msg_test(msg)
+		self.send_msg_broadcast(msg)
 
 	def send_msg(self, msg):
 		if(msg['dst_ip'] not in self.GPS_Map):
-			self.send_msg_test(msg)
+			self.send_msg_broadcast(msg)
 			return
 		
 		# This message was send before or not
