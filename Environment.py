@@ -17,7 +17,6 @@ class Environment:
 				self.links[i].append([])
 
 	def send(self, sender_ip, receiver_ip, msg):
-		# if(msg['type'] != 'hello' and msg['type'] != 'ACK'):
 		self.links[sender_ip][receiver_ip].append(msg)
 		if( len(self.links[sender_ip][receiver_ip]) == 1):
 			threading.Timer(self.Transfer_time, self.send_sim,[sender_ip, receiver_ip]).start()
@@ -28,7 +27,8 @@ class Environment:
 			msg = self.links[sender_ip][receiver_ip][0]
 			del self.links[sender_ip][receiver_ip][0]
 			
-			print(sender_ip,'send',msg['type'],'to',receiver_ip)
+			if(msg['type'] != 'hello' and msg['type'] != 'ACK'):
+				print(sender_ip,'send',msg['type'],'to',receiver_ip)
 			self.Nodes[receiver_ip].receive(sender_ip, msg)
 
 		if( len(self.links[sender_ip][receiver_ip]) > 0):
@@ -60,7 +60,13 @@ if __name__ == '__main__':
 
 	time.sleep(3)
 
+	
+	print("********************"*2,"Reqest GPS")
+	env.Nodes[1].request_gps(4)
+
+	time.sleep(5)
 	for i in env.Nodes:
 		print(env.Nodes[i].GPS_Map)
-	print("********************"*2)
-	env.Nodes[1].request_gps(4)
+
+	print("********************"*2,"Send Data")
+	env.Nodes[1].send_data(4,50)

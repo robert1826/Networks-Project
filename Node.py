@@ -92,10 +92,18 @@ class Node:
 			self.GPS_Map[msg['rpl_ip']] = msg['rpl_gps']
 			print("**"*10,self.IP,"receive location of",msg['rpl_ip'])
 		
+		elif msg['type'] == 'data' and msg['dst_ip'] != self.IP:
+			# Forward the msg
+			self.send_msg(msg)
+
+		elif msg['type'] == 'data':
+			# Forward the msg
+			print(self.IP, 'received data seq. number =',msg['seq'])
+
 		elif msg['type'] == 'ACK':
 			# Update time for msg[src_ip]
 			if(msg['id'] in self.wait_ACK):
-				dt = self.wait_ACK[msg['id']] - time.time()
+				dt = time.time() - self.wait_ACK[msg['id']]
 				del self.wait_ACK[msg['id']]
 				self.Immediate_Neighbours[msg['src_ip']].append(dt)
 				
@@ -152,7 +160,7 @@ class Node:
 			for node_ip in self.Immediate_Neighbours:
 				if(self.in_region(self.GPS_Map[msg['dst_ip']], self.GPS_Map[node_ip], ang)):
 					possible_nodes.append(node_ip)
-			print("******************",possible_nodes)
+			# print("******************",possible_nodes)
 		
 		# 2- choose one neighbor to send msg to
 		mn = 10000
@@ -161,7 +169,7 @@ class Node:
 			if(mn > self.predict_time(node_ip)):
 				mn = self.predict_time(node_ip)
 				ip = node_ip
-		self.Environment.send(self.IP, node_ip, msg)
+		self.Environment.send(self.IP, ip, msg)
 		return 0
 
 	def in_region(self, dest_gps, gps, ang = 45):
@@ -193,4 +201,18 @@ class Node:
 		return [xnew,ynew]
 
 	def predict_time(self, node_ip):
+		# if(self.IP == 1):
+		# 	print(node_ip, self.Immediate_Neighbours[node_ip])
 		return sum(self.Immediate_Neighbours[node_ip])/3
+
+	def send_data(self,receiver_ip,n):
+		
+		for i in range(n):
+			msg = {'type' : 'data', 'id' : self.msg_id ,
+				'src_ip' : self.IP, 'dst_ip' : receiver_ip,
+				'src_gps' : self.GPS_Location,
+				'seq':i}
+			self.wait_ACK[self.msg_id] = time.time()
+			self.msg_id += 1
+			self.send_msg(msg)
+			time.sleep(0.5)
