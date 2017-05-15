@@ -1,4 +1,4 @@
-from Node import *
+from Node2 import *
 import time
 class Environment:
 	Nodes = {}	# map[node_id] => Node

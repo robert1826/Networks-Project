@@ -98,7 +98,7 @@ class Node:
 
 		elif msg['type'] == 'data':
 			# Forward the msg
-			print(self.IP, 'received data seq. number =',msg['seq'])
+			print(self.IP, 'received data seq. number =',msg['seq'],"after",time.time()-msg['time'])
 
 		elif msg['type'] == 'ACK':
 			# Update time for msg[src_ip]
@@ -206,12 +206,12 @@ class Node:
 		return sum(self.Immediate_Neighbours[node_ip])/3
 
 	def send_data(self,receiver_ip,n):
-		
+		t = time.time()
 		for i in range(n):
 			msg = {'type' : 'data', 'id' : self.msg_id ,
 				'src_ip' : self.IP, 'dst_ip' : receiver_ip,
 				'src_gps' : self.GPS_Location,
-				'seq':i}
+				'seq':i, 'time':t}
 			self.wait_ACK[self.msg_id] = time.time()
 			self.msg_id += 1
 			self.send_msg(msg)
