@@ -27,13 +27,13 @@ class Node:
 		self.GPS_Map = {}
 		
 		self.wait_ACK = {}
-		self.alfa = {}
-		self.beta = {}
+		self.time_of_measure = {}
 
 		self.hello()
 
 	def add_neighbour(self, node):
 		self.Immediate_Neighbours[node] = [0,0,0,0,0]
+		self.time_of_measure[node] = [time.time(),time.time(),time.time(),time.time(),time.time()]
 
 	def hello(self):
 		# print(self.IP,'send hello')
@@ -58,6 +58,7 @@ class Node:
 		if msg['type'] == 'hello':
 			if(sender_ip not in self.Immediate_Neighbours):
 				self.Immediate_Neighbours[sender_ip] = [0,0,0,0,0]
+				self.time_of_measure[sender_ip] = [time.time(),time.time(),time.time(),time.time(),time.time()]
 			return
 		
 		elif msg['type'] == 'gps_reply' and msg['dst_ip'] != self.IP:
@@ -107,9 +108,11 @@ class Node:
 				dt = time.time() - self.wait_ACK[msg['id']]
 				del self.wait_ACK[msg['id']]
 				self.Immediate_Neighbours[msg['src_ip']].append(dt)
+				self.time_of_measure[msg['src_ip']].append(time.time())
 				
 				if(len(self.Immediate_Neighbours[msg['src_ip']])>5):
 					del self.Immediate_Neighbours[msg['src_ip']][0]
+					del self.time_of_measure[msg['src_ip']][0]
 				# print(dt)
 				# print(msg['src_ip'],"=====>",self.Immediate_Neighbours[msg['src_ip']])
 			return
@@ -175,7 +178,7 @@ class Node:
 
 	def in_region(self, dest_gps, gps, ang = 45):
 		m1 = dest_gps[1] - self.GPS_Location[1]
-		m2 = dest_gps[0] - self.GPS_Location[0]-0.0000000000000001
+		m2 = dest_gps[0] - self.GPS_Location[0]+0.0000000000000001
 		angle = math.atan2(m1,m2)
 
 		p = self.rotate_point(gps[:], angle)
@@ -205,13 +208,17 @@ class Node:
 		# if(self.IP == 1):
 		# 	print(node_ip, self.Immediate_Neighbours[node_ip])
 		# return sum(self.Immediate_Neighbours[node_ip])/3
-		reg = linear_model.Lasso(alpha = 0.1)
-		x = [[0], [1], [2], [3],[4]]
+		
+		x = []
+		a = self.time_of_measure[node_ip][0]
+		for i in self.time_of_measure[node_ip]:
+			x.append([i-a])
 		y = []
 		for i in self.Immediate_Neighbours[node_ip]:
 			y.append(i)
+		reg = linear_model.Lasso(alpha = 0.1)
 		reg.fit (x,y)
-		return reg.predict(5)[0]
+		return reg.predict(time.time()-a)[0]
 
 	def send_data(self,receiver_ip,n):
 		t = time.time()
