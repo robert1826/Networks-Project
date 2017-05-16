@@ -180,4 +180,4 @@ class Node:
 			# 	self.sended_msgs[msg['src_ip']] = []
 			# self.sended_msgs[msg['src_ip']].append(msg['id'])
 			self.send_msg(msg)
-			time.sleep(0.5)
+			time.sleep(0.1)

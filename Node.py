@@ -6,6 +6,7 @@
 # 	5-src_gps
 from Environment import *
 import time, threading, math
+from sklearn import linear_model
 class Node:
 	# Environment = None
 	# IP = None 			# my ip
@@ -32,7 +33,7 @@ class Node:
 		self.hello()
 
 	def add_neighbour(self, node):
-		self.Immediate_Neighbours[node] = [0,0,0]
+		self.Immediate_Neighbours[node] = [0,0,0,0,0]
 
 	def hello(self):
 		# print(self.IP,'send hello')
@@ -56,7 +57,7 @@ class Node:
 
 		if msg['type'] == 'hello':
 			if(sender_ip not in self.Immediate_Neighbours):
-				self.Immediate_Neighbours[sender_ip] = [0,0,0]
+				self.Immediate_Neighbours[sender_ip] = [0,0,0,0,0]
 			return
 		
 		elif msg['type'] == 'gps_reply' and msg['dst_ip'] != self.IP:
@@ -107,7 +108,7 @@ class Node:
 				del self.wait_ACK[msg['id']]
 				self.Immediate_Neighbours[msg['src_ip']].append(dt)
 				
-				if(len(self.Immediate_Neighbours[msg['src_ip']])>3):
+				if(len(self.Immediate_Neighbours[msg['src_ip']])>5):
 					del self.Immediate_Neighbours[msg['src_ip']][0]
 				# print(dt)
 				# print(msg['src_ip'],"=====>",self.Immediate_Neighbours[msg['src_ip']])
@@ -203,7 +204,14 @@ class Node:
 	def predict_time(self, node_ip):
 		# if(self.IP == 1):
 		# 	print(node_ip, self.Immediate_Neighbours[node_ip])
-		return sum(self.Immediate_Neighbours[node_ip])/3
+		# return sum(self.Immediate_Neighbours[node_ip])/3
+		reg = linear_model.Lasso(alpha = 0.1)
+		x = [[0], [1], [2], [3],[4]]
+		y = []
+		for i in self.Immediate_Neighbours[node_ip]:
+			y.append(i)
+		reg.fit (x,y)
+		return reg.predict(5)[0]
 
 	def send_data(self,receiver_ip,n):
 		t = time.time()
@@ -215,4 +223,4 @@ class Node:
 			self.wait_ACK[self.msg_id] = time.time()
 			self.msg_id += 1
 			self.send_msg(msg)
-			time.sleep(0.5)
+			time.sleep(0.1)

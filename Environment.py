@@ -1,9 +1,9 @@
-from Node2 import *
+from Node import *
 import time
 class Environment:
 	Nodes = {}	# map[node_id] => Node
 	links = []
-	Transfer_time = 0.5
+	Transfer_time = 0.1
 
 	def __init__(self, n):
 		n += 1
@@ -69,4 +69,4 @@ if __name__ == '__main__':
 		print(env.Nodes[i].GPS_Map)
 
 	print("********************"*2,"Send Data")
-	env.Nodes[1].send_data(4,50)
+	env.Nodes[1].send_data(4,100)
